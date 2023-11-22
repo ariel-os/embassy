@@ -37,6 +37,7 @@ macro_rules! peripherals_struct {
         /// Struct containing all the peripheral singletons.
         ///
         /// To obtain the peripherals, you must initialize the HAL, by calling [`crate::init`].
+        #[cfg_attr(feature = "optfield", optfield::optfield(pub OptionalPeripherals, attrs, doc, field_attrs, field_doc, from))]
         #[allow(non_snake_case)]
         pub struct Peripherals {
             $(
