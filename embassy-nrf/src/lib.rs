@@ -298,6 +298,8 @@ pub use chip::pac;
 #[cfg(not(feature = "unstable-pac"))]
 pub(crate) use chip::pac;
 pub use chip::{EASY_DMA_SIZE, Peripherals, peripherals};
+#[cfg(feature = "optfield")]
+pub use chip::OptionalPeripherals;
 pub use embassy_hal_internal::{Peri, PeripheralType};
 
 pub use crate::chip::interrupt;
