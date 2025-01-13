@@ -206,6 +206,7 @@ document-features = "0.2.10"
 sha2-const-stable = "0.1"
 rp-binary-info = { version = "0.1.0", optional = true }
 smart-leds = "0.4.0"
+optfield = { version = "0.4.0", optional = true}
 
 [dev-dependencies]
 embassy-executor = { version = "0.10.0", path = "../embassy-executor", features = ["platform-std", "executor-thread"] }
