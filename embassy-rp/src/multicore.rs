@@ -127,15 +127,27 @@ unsafe impl InterruptNumber for Irq {
     }
 }
 
-#[cfg(all(feature = "rt", feature = "rp2040"))]
-#[interrupt]
-unsafe fn SIO_IRQ_PROC1() {
+#[cfg(feature = "fifo-handler")]
+extern "Rust" {
+    fn handle_fifo_token(token: u32) -> bool;
+}
+
+#[inline]
+#[cfg(feature = "rt")]
+unsafe fn sio_handler() {
     let sio = pac::SIO;
     // Clear IRQ
     sio.fifo().st().write(|w| w.set_wof(false));
 
     while sio.fifo().st().read().vld() {
         let fifo_read = fifo_read_wfe();
+
+        // Forward to user handler.
+        #[cfg(feature = "fifo-handler")]
+        if handle_fifo_token(fifo_read) {
+            continue;
+        }
+
         if fifo_read == PAUSE_TOKEN {
             // Pause CORE1 execution and disable interrupts
             cortex_m::interrupt::disable();
@@ -151,39 +163,35 @@ unsafe fn SIO_IRQ_PROC1() {
         } else if fifo_read & 0xFFFF0000 == PEND_IRQ_TOKEN {
             // Pend the IRQ to wake up interrupt executors.
             let irq = Irq((fifo_read & 0xFFFF) as u16);
+
+            #[cfg(feature = "rp2040")]
             NVIC::pend(irq);
+
+            #[cfg(feature = "_rp235x")]
+            {
+                let mut nvic: NVIC = core::mem::transmute(());
+                nvic.request(irq);
+            }
         }
     }
+}
+
+#[cfg(all(feature = "rt", feature = "rp2040"))]
+#[interrupt]
+unsafe fn SIO_IRQ_PROC0() {
+    sio_handler();
+}
+
+#[interrupt]
+#[cfg(all(feature = "rt", feature = "rp2040"))]
+unsafe fn SIO_IRQ_PROC1() {
+    sio_handler();
 }
 
 #[cfg(all(feature = "rt", feature = "_rp235x"))]
 #[interrupt]
 unsafe fn SIO_IRQ_FIFO() {
-    let sio = pac::SIO;
-    // Clear IRQ
-    sio.fifo().st().write(|w| w.set_wof(false));
-
-    while sio.fifo().st().read().vld() {
-        let fifo_read = fifo_read_wfe();
-        if fifo_read == PAUSE_TOKEN {
-            // Pause CORE1 execution and disable interrupts
-            cortex_m::interrupt::disable();
-            // Signal to CORE0 that execution is paused
-            fifo_write(PAUSE_TOKEN);
-            // Wait for `resume` signal from CORE0
-            while fifo_read_wfe() != RESUME_TOKEN {
-                cortex_m::asm::nop();
-            }
-            cortex_m::interrupt::enable();
-            // Signal to CORE0 that execution is resumed
-            fifo_write(RESUME_TOKEN);
-        } else if fifo_read & 0xFFFF0000 == PEND_IRQ_TOKEN {
-            // Pend the IRQ to wake up interrupt executors.
-            let irq = Irq((fifo_read & 0xFFFF) as u16);
-            let mut nvic: NVIC = core::mem::transmute(());
-            nvic.request(irq);
-        }
-    }
+    sio_handler();
 }
 
 /// Spawn a function on this core
@@ -316,11 +324,11 @@ where
     fifo_read();
 
     // Enable fifo interrupt on CORE0 for `pend irq` functionality.
-    #[cfg(all(feature = "rp2040", feature = "executor-interrupt"))]
+    #[cfg(all(feature = "rp2040", any(feature = "executor-interrupt", feature = "fifo-handler")))]
     unsafe {
         interrupt::SIO_IRQ_PROC1.enable()
     };
-    #[cfg(all(feature = "_rp235x", feature = "executor-interrupt"))]
+    #[cfg(all(feature = "_rp235x", any(feature = "executor-interrupt", feature = "fifo-handler")))]
     unsafe {
         interrupt::SIO_IRQ_FIFO.enable()
     };
@@ -329,18 +337,40 @@ where
 /// Pause execution on CORE1.
 pub fn pause_core1() {
     if IS_CORE1_INIT.load(Ordering::Acquire) {
-        fifo_write(PAUSE_TOKEN);
-        // Wait for CORE1 to signal it has paused execution.
-        while fifo_read() != PAUSE_TOKEN {}
+        cortex_m::interrupt::free(|_| {
+            fifo_write(PAUSE_TOKEN);
+            // Wait for CORE1 to signal it has paused execution.
+            loop {
+                let token = fifo_read();
+                if token == PAUSE_TOKEN {
+                    break;
+                }
+                #[cfg(feature = "fifo-handler")]
+                unsafe {
+                    handle_fifo_token(token);
+                }
+            }
+        })
     }
 }
 
 /// Resume CORE1 execution.
 pub fn resume_core1() {
     if IS_CORE1_INIT.load(Ordering::Acquire) {
-        fifo_write(RESUME_TOKEN);
-        // Wait for CORE1 to signal it has resumed execution.
-        while fifo_read() != RESUME_TOKEN {}
+        cortex_m::interrupt::free(|_| {
+            fifo_write(RESUME_TOKEN);
+            // Wait for CORE1 to signal it has resumed execution.
+            loop {
+                let token = fifo_read();
+                if token == RESUME_TOKEN {
+                    break;
+                }
+                #[cfg(feature = "fifo-handler")]
+                unsafe {
+                    handle_fifo_token(token);
+                }
+            }
+        })
     }
 }
 
