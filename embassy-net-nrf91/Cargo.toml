@@ -21,10 +21,10 @@ log = { version = "0.4.14", optional = true }
 nrf-pac = { version = "0.2.0", git = "https://github.com/embassy-rs/nrf-pac.git", rev = "7f450696f95591ce42f4da6e7d0402750ab1e50a" }
 cortex-m = "0.7.7"
 
-embassy-time = { version = "0.5.0", path = "../embassy-time" }
-embassy-sync = { version = "0.7.2", path = "../embassy-sync" }
-embassy-futures = { version = "0.1.2", path = "../embassy-futures" }
-embassy-net-driver-channel = { version = "0.3.2", path = "../embassy-net-driver-channel" }
+embassy-time = { version = "0.5.0"}
+embassy-sync = { version = "0.7.2"}
+embassy-futures = { version = "0.1.2"}
+embassy-net-driver-channel = { version = "0.3.2"}
 
 heapless = "0.8"
 embedded-io = { version = "0.7.1" }
