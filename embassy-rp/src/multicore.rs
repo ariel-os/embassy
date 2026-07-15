@@ -128,7 +128,7 @@ unsafe impl InterruptNumber for Irq {
 }
 
 #[cfg(feature = "fifo-handler")]
-extern "Rust" {
+unsafe extern "Rust" {
     fn handle_fifo_token(token: u32) -> bool;
 }
 
