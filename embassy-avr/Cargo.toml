@@ -1,0 +1,51 @@
+[package]
+name = "embassy-avr"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Embassy Hardware Abstraction Layer (HAL) for AVR microcontrollers, wrapping avr-hal"
+keywords = ["embedded", "async", "avr", "embedded-hal", "arduino"]
+categories = ["embedded", "hardware-support", "no-std", "asynchronous"]
+repository = "https://github.com/ariel-os/embassy"
+documentation = "https://docs.embassy.dev/embassy-avr"
+
+[features]
+default = ["rt"]
+
+## AVR runtime init (uses avr-device's `entry` to set up .bss/.data/stack)
+rt = ["avr-device/rt"]
+
+## embassy-time integration: provides a Timer0-based time driver
+time-driver-tc0 = ["dep:embassy-time-driver", "dep:embassy-time", "_time-driver"]
+
+## Use TC0 (8-bit Timer0) for the time driver tick
+_time-driver = ["dep:embassy-time-driver"]
+
+## ATmega328P (Arduino Uno)
+device-atmega328p = ["atmega-hal/atmega328p", "avr-device/atmega328p"]
+
+## Arduino Uno (board selection on top of atmega328p)
+arduino-uno = ["device-atmega328p", "arduino-hal/arduino-uno"]
+
+[dependencies]
+embassy-time-driver = { version = "0.1", path = "../embassy-time-driver", optional = true }
+embassy-time = { version = "0.3.2", path = "../embassy-time", optional = true }
+
+embedded-hal = "1.0"
+embedded-hal-async = "1.0"
+embedded-hal-02 = { package = "embedded-hal", version = "0.2.6", features = ["unproven"] }
+nb = "1.0"
+embedded-io = "0.6.0"
+embedded-io-async = "0.6.1"
+embedded-storage = "0.3.1"
+
+avr-device = { version = "0.8.1" }
+
+# avr-hal generic + MCU HAL + board crate. Use local path for dev; ariel-os patches override.
+avr-hal-generic = { path = "../../avr-hal/avr-hal-generic" }
+atmega-hal = { path = "../../avr-hal/mcu/atmega-hal", optional = true }
+arduino-hal = { path = "../../avr-hal/arduino-hal", optional = true }
+
+critical-section = "1.1"
+portable-atomic = { version = "1.11", features = ["unsafe-assume-single-core"] }
+cfg-if = "1.0"

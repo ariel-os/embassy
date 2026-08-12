@@ -1,0 +1,9 @@
+[target.avr-none]
+linker = "avr-gcc"
+rustflags = [
+    "-C", "target-cpu=atmega328p",
+    "-C", "link-arg=-mmcu=atmega328p",
+    "-C", "link-arg=-latmega328p",
+    "-C", "link-arg=-lm",
+    "-C", "link-arg=-lc",
+]
