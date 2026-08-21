@@ -71,6 +71,7 @@ where
     T: embedded_hal_1::spi::SpiBus<Error = E>,
 {
     async fn flush(&mut self) -> Result<(), Self::Error> {
+        self.wrapped.flush()?;
         Ok(())
     }
 
